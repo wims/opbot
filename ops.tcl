@@ -10,10 +10,11 @@ namespace eval ::ops {
 namespace import ::util::*
 
 variable adminFlag       "|V"          ;# user flag for allowing op commands
+variable pollFlag        "|P"          ;# user flag for allowing poll op commands
 variable putCommand      putnow        ;# send function: putnow, putquick, putserv, puthelp
 variable debugLogLevel   8             ;# log all output to this log level [1-8, 0 = disabled]
 variable channel         "#wims-test"  ;# name of the channel
-variable scriptVersion   "0.2.2"       ;# script version
+variable scriptVersion   "0.2.3"       ;# script version
 variable banPrefix       "-**"         ;# prefix so for separating bans set with .ban and other bans
 variable banTime         1440          ;# number of minutes a ban should stay active
 variable ns [namespace current]
@@ -49,7 +50,7 @@ proc topic {unick host handle dest text} {
 	putserv "TOPIC $channel :$text"
 	putlog "$op has changed the topic in $channel to $text"
 }
-mbind {msg pub} $adminFlag {.topic} ${ns}::topic
+mbind {msg pub} {$adminFlag | $pollFlag} {.topic} ${ns}::topic
 
 proc kick {unick host handle dest text} {
 	variable channel
@@ -209,24 +210,36 @@ mbind {msg pub} $adminFlag {.listbans .lb} ${ns}::listBans
 proc help {unick host handle dest text} {
 	variable channel
 	variable scriptVersion
+	variable adminFlag
 	if {![onchan $unick $channel]} { return 0 }
 	send $unick $dest "[b][u]$channel OPERATOR SCRIPT v$scriptVersion:[/u][/b]"
-	foreach {line} [concat {
-		{ Operator commands on this bot }
-		{  .topic <topic> .................. Sets the topic in the channel it's typed}
-		{  .kick <nick> [reason] ........... Kick a user from the channel}
-		{  .kban <nick> [reason] ........... Kick and ban a user from the channel}
-		{  .ban <nick|hostmask> [reason] ... Ban a user by nickname or hostmask}
-		{    It's recommended to specify the nickname of the banned hostmask as reason when using .ban <hostmask> <reason> }
-		{  .unban <nick|hostmask> .......... Unban a nickname or hostmask}
-		{  .listbans ....................... Displays the banlist}
-		{  .ohelp .......................... Displays this help menu}
-		{}
-	}] {
-		send $unick $dest $line
+	if {[matchattr $handle $adminFlag $channel]} {
+		foreach {line} [concat {
+			{ Operator commands on this bot }
+			{  .topic <topic> .................. Sets the topic in the channel it's typed}
+			{  .kick <nick> [reason] ........... Kick a user from the channel}
+			{  .kban <nick> [reason] ........... Kick and ban a user from the channel}
+			{  .ban <nick|hostmask> [reason] ... Ban a user by nickname or hostmask}
+			{    It's recommended to specify the nickname of the banned hostmask as reason when using .ban <hostmask> <reason> }
+			{  .unban <nick|hostmask> .......... Unban a nickname or hostmask}
+			{  .listbans ....................... Displays the banlist}
+			{  .ohelp .......................... Displays this help menu}
+			{}
+		}] {
+			send $unick $dest $line
+		}
+	} else {
+		foreach {line} [concat {
+			{ Poll Operator commands on this bot }
+			{  .topic <topic> .................. Sets the topic in the channel it's typed}
+			{  .ohelp .......................... Displays this help menu}
+			{}
+		}] {
+			send $unick $dest $line
+		}
 	}
 }
-mbind {msg pub} $adminFlag {.ohelp} ${ns}::help
+mbind {msg pub} {$adminFlag | $pollFlag} {.ohelp} ${ns}::help
 
 proc rules {unick host handle dest text} {
 	variable channel
