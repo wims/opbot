@@ -10,11 +10,11 @@ namespace eval ::ops {
 namespace import ::util::*
 
 variable adminFlag       "|V"          ;# user flag for allowing op commands
-variable pollFlag        "|P"          ;# user flag for allowing poll op commands
+variable pollFlag        "P"           ;# user flag for allowing poll op commands
 variable putCommand      putnow        ;# send function: putnow, putquick, putserv, puthelp
 variable debugLogLevel   8             ;# log all output to this log level [1-8, 0 = disabled]
 variable channel         "#wims-test"  ;# name of the channel
-variable scriptVersion   "0.2.3"       ;# script version
+variable scriptVersion   "0.2.4"       ;# script version
 variable banPrefix       "-**"         ;# prefix so for separating bans set with .ban and other bans
 variable banTime         1440          ;# number of minutes a ban should stay active
 variable ns [namespace current]
@@ -50,7 +50,7 @@ proc topic {unick host handle dest text} {
 	putserv "TOPIC $channel :$text"
 	putlog "$op has changed the topic in $channel to $text"
 }
-mbind {msg pub} {$adminFlag | $pollFlag} {.topic} ${ns}::topic
+mbind {msg pub} "$adminFlag$pollFlag"  {.topic} ${ns}::topic
 
 proc kick {unick host handle dest text} {
 	variable channel
@@ -211,10 +211,11 @@ proc help {unick host handle dest text} {
 	variable channel
 	variable scriptVersion
 	variable adminFlag
+	set output ""
 	if {![onchan $unick $channel]} { return 0 }
 	send $unick $dest "[b][u]$channel OPERATOR SCRIPT v$scriptVersion:[/u][/b]"
 	if {[matchattr $handle $adminFlag $channel]} {
-		foreach {line} [concat {
+		set output [concat {
 			{ Operator commands on this bot }
 			{  .topic <topic> .................. Sets the topic in the channel it's typed}
 			{  .kick <nick> [reason] ........... Kick a user from the channel}
@@ -225,21 +226,20 @@ proc help {unick host handle dest text} {
 			{  .listbans ....................... Displays the banlist}
 			{  .ohelp .......................... Displays this help menu}
 			{}
-		}] {
-			send $unick $dest $line
-		}
+		}]
 	} else {
-		foreach {line} [concat {
+		set output [concat {
 			{ Poll Operator commands on this bot }
 			{  .topic <topic> .................. Sets the topic in the channel it's typed}
 			{  .ohelp .......................... Displays this help menu}
 			{}
-		}] {
+		}]
+	}
+	foreach line $output {
 			send $unick $dest $line
-		}
 	}
 }
-mbind {msg pub} {$adminFlag | $pollFlag} {.ohelp} ${ns}::help
+mbind {msg pub} "$adminFlag$pollFlag" {.ohelp} ${ns}::help
 
 proc rules {unick host handle dest text} {
 	variable channel
