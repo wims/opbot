@@ -211,7 +211,6 @@ proc help {unick host handle dest text} {
 	variable channel
 	variable scriptVersion
 	variable adminFlag
-	set output ""
 	if {![onchan $unick $channel]} { return 0 }
 	send $unick $dest "[b][u]$channel OPERATOR SCRIPT v$scriptVersion:[/u][/b]"
 	if {[matchattr $handle $adminFlag $channel]} {
